@@ -1,1 +1,800 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Scanner QR Absensi MTs PSM</title>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f0fdf4;
+  color:#172016;
+}
+
+.header{
+  background:linear-gradient(135deg,#166534,#16a34a);
+  color:white;
+  text-align:center;
+  padding:25px 15px;
+}
+
+.header h1{
+  margin:0;
+  font-size:25px;
+}
+
+.header p{
+  margin:7px 0 0;
+}
+
+.container{
+  width:94%;
+  max-width:650px;
+  margin:20px auto;
+}
+
+.card{
+  background:white;
+  padding:20px;
+  border-radius:20px;
+  margin-bottom:18px;
+  box-shadow:0 5px 20px rgba(0,0,0,.08);
+}
+
+h2{
+  margin-top:0;
+}
+
+.jenis{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.jenis button{
+  padding:15px 8px;
+  border:0;
+  border-radius:12px;
+  background:#dcfce7;
+  color:#166534;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.jenis button.active{
+  background:#166534;
+  color:white;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border:1px solid #ccc;
+  border-radius:10px;
+  font-size:15px;
+}
+
+.btn{
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:0;
+  border-radius:12px;
+  background:#166534;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn.red{
+  background:#b91c1c;
+}
+
+#reader{
+  width:100%;
+  max-width:500px;
+  margin:15px auto;
+  overflow:hidden;
+  border-radius:15px;
+}
+
+.status{
+  padding:14px;
+  margin-top:15px;
+  border-radius:12px;
+  text-align:center;
+  font-weight:bold;
+  background:#f1f5f9;
+}
+
+.success{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.error{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.warning{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.info{
+  font-size:13px;
+  color:#64748b;
+  line-height:1.5;
+}
+
+.footer{
+  text-align:center;
+  padding:20px;
+  font-size:12px;
+  color:#64748b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>📷 SCANNER QR ABSENSI</h1>
+
+<p>
+MTs PSM Sugihwaras Loceret
+</p>
+
+</div>
+
+
+<div class="container">
+
+
+<!-- KONEKSI -->
+
+<div class="card">
+
+<h2>🔗 Koneksi Sistem</h2>
+
+<input
+id="scriptUrl"
+type="text"
+placeholder="Tempel URL Web App Apps Script">
+
+<button
+class="btn"
+onclick="simpanURL()">
+
+💾 SIMPAN URL
+
+</button>
+
+<p class="info">
+Masukkan URL Web App Apps Script yang berakhiran
+<b>/exec</b>.
+</p>
+
+</div>
+
+
+<!-- JENIS -->
+
+<div class="card">
+
+<h2>1️⃣ Pilih Absensi</h2>
+
+<div class="jenis">
+
+<button
+class="active"
+onclick="pilihJenis('KEHADIRAN',this)">
+🟢 Kehadiran
+</button>
+
+<button
+onclick="pilihJenis('DHUHA',this)">
+🌅 Dhuha
+</button>
+
+<button
+onclick="pilihJenis('DHUHUR',this)">
+🕌 Dhuhur
+</button>
+
+<button
+onclick="pilihJenis('MADIN',this)">
+📚 Madin
+</button>
+
+</div>
+
+</div>
+
+
+<!-- SCANNER -->
+
+<div class="card">
+
+<h2>2️⃣ Scanner Kamera</h2>
+
+<div id="reader"></div>
+
+<button
+class="btn"
+onclick="mulaiScanner()">
+
+📷 MULAI SCANNER
+
+</button>
+
+<button
+class="btn red"
+onclick="stopScanner()">
+
+⛔ HENTIKAN
+
+</button>
+
+<div
+id="status"
+class="status">
+
+Scanner belum dijalankan.
+
+</div>
+
+</div>
+
+
+<!-- MANUAL -->
+
+<div class="card">
+
+<h2>3️⃣ Tes Manual</h2>
+
+<p class="info">
+Gunakan NIS <b>1001</b> untuk mengetes sistem.
+</p>
+
+<input
+id="nis"
+type="text"
+placeholder="Masukkan NIS">
+
+<button
+class="btn"
+onclick="kirimManual()">
+
+✅ KIRIM ABSENSI
+
+</button>
+
+</div>
+
+
+</div>
+
+
+<div class="footer">
+
+Sistem Absensi Digital<br>
+MTs PSM Sugihwaras Loceret
+
+</div>
+
+
+<script>
+
+let jenis = "KEHADIRAN";
+
+let scanner = null;
+
+let sedangScan = false;
+
+
+/* =========================
+   SAAT HALAMAN DIBUKA
+========================= */
+
+window.onload = function(){
+
+  const url =
+    localStorage.getItem("scriptUrl");
+
+  if(url){
+
+    document.getElementById(
+      "scriptUrl"
+    ).value = url;
+
+  }
+
+};
+
+
+/* =========================
+   SIMPAN URL
+========================= */
+
+function simpanURL(){
+
+  const url =
+    document.getElementById(
+      "scriptUrl"
+    ).value.trim();
+
+  if(!url){
+
+    status(
+      "❌ URL Apps Script belum diisi.",
+      "error"
+    );
+
+    return;
+  }
+
+  if(
+    !url.includes(
+      "script.google.com/macros/"
+    )
+  ){
+
+    status(
+      "❌ URL Apps Script tidak valid.",
+      "error"
+    );
+
+    return;
+  }
+
+  localStorage.setItem(
+    "scriptUrl",
+    url
+  );
+
+  status(
+    "✅ URL berhasil disimpan.",
+    "success"
+  );
+
+}
+
+
+/* =========================
+   PILIH JENIS
+========================= */
+
+function pilihJenis(
+  pilihan,
+  tombol
+){
+
+  jenis = pilihan;
+
+  document
+    .querySelectorAll(".jenis button")
+    .forEach(
+      b => b.classList.remove("active")
+    );
+
+  tombol.classList.add("active");
+
+  status(
+    "Jenis: " +
+    namaJenis(jenis),
+    "warning"
+  );
+
+}
+
+
+function namaJenis(j){
+
+  if(j === "KEHADIRAN")
+    return "Kehadiran";
+
+  if(j === "DHUHA")
+    return "Dhuha";
+
+  if(j === "DHUHUR")
+    return "Dhuhur";
+
+  if(j === "MADIN")
+    return "Madin";
+
+  return j;
+}
+
+
+/* =========================
+   MULAI SCANNER
+========================= */
+
+async function mulaiScanner(){
+
+  if(scanner){
+
+    status(
+      "⚠️ Scanner sudah berjalan.",
+      "warning"
+    );
+
+    return;
+  }
+
+  const url =
+    localStorage.getItem(
+      "scriptUrl"
+    );
+
+  if(!url){
+
+    status(
+      "❌ Simpan URL Apps Script terlebih dahulu.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  scanner =
+    new Html5Qrcode("reader");
+
+
+  try{
+
+    const cameras =
+      await Html5Qrcode.getCameras();
+
+
+    if(
+      !cameras ||
+      cameras.length === 0
+    ){
+
+      throw new Error(
+        "Kamera tidak ditemukan."
+      );
+
+    }
+
+
+    let kamera =
+      cameras.find(
+        c =>
+          /back|rear|environment|belakang/i
+          .test(c.label)
+      );
+
+
+    if(!kamera){
+
+      kamera =
+        cameras[cameras.length - 1];
+
+    }
+
+
+    await scanner.start(
+
+      kamera.id,
+
+      {
+        fps:10,
+
+        qrbox:{
+          width:250,
+          height:250
+        },
+
+        aspectRatio:1.0
+
+      },
+
+      function(
+        decodedText
+      ){
+
+        qrBerhasil(
+          decodedText
+        );
+
+      },
+
+      function(){
+
+        // Tidak perlu menampilkan error
+        // selama QR belum terbaca.
+
+      }
+
+    );
+
+
+    status(
+      "📷 Kamera aktif. Arahkan QR siswa.",
+      "success"
+    );
+
+  }
+  catch(error){
+
+    console.error(error);
+
+    scanner = null;
+
+    status(
+      "❌ Kamera gagal dibuka. Pastikan halaman dibuka melalui HTTPS dan izin kamera diberikan.",
+      "error"
+    );
+
+  }
+
+}
+
+
+/* =========================
+   QR BERHASIL
+========================= */
+
+async function qrBerhasil(
+  text
+){
+
+  if(sedangScan)
+    return;
+
+  sedangScan = true;
+
+  const nis =
+    String(text).trim();
+
+
+  status(
+    "⏳ QR terbaca: " +
+    nis +
+    " — mengirim...",
+    "warning"
+  );
+
+
+  try{
+
+    if(scanner){
+
+      await scanner.pause(true);
+
+    }
+
+  }catch(e){}
+
+
+  kirimAbsensi(
+    nis,
+    jenis
+  );
+
+}
+
+
+/* =========================
+   KIRIM ABSENSI
+========================= */
+
+function kirimAbsensi(
+  nis,
+  jenisAbsensi
+){
+
+  const url =
+    localStorage.getItem(
+      "scriptUrl"
+    );
+
+
+  if(!url){
+
+    status(
+      "❌ URL Apps Script belum tersedia.",
+      "error"
+    );
+
+    sedangScan = false;
+
+    return;
+  }
+
+
+  /*
+   * Menggunakan FORM POST.
+   * Tidak menggunakan fetch,
+   * sehingga tidak terganggu CORS.
+   */
+
+  const form =
+    document.createElement("form");
+
+  form.method = "POST";
+
+  form.action = url;
+
+  form.target = "_blank";
+
+  form.style.display = "none";
+
+
+  const a =
+    document.createElement("input");
+
+  a.type = "hidden";
+
+  a.name = "nis";
+
+  a.value = nis;
+
+
+  const b =
+    document.createElement("input");
+
+  b.type = "hidden";
+
+  b.name = "jenis";
+
+  b.value = jenisAbsensi;
+
+
+  form.appendChild(a);
+
+  form.appendChild(b);
+
+  document.body.appendChild(form);
+
+  form.submit();
+
+
+  setTimeout(
+    function(){
+
+      form.remove();
+
+      status(
+        "✅ NIS " +
+        nis +
+        " telah dikirim.",
+        "success"
+      );
+
+      sedangScan = false;
+
+      try{
+
+        if(scanner){
+
+          scanner.resume();
+
+        }
+
+      }catch(e){}
+
+    },
+    1000
+  );
+
+}
+
+
+/* =========================
+   MANUAL
+========================= */
+
+function kirimManual(){
+
+  const nis =
+    document.getElementById(
+      "nis"
+    ).value.trim();
+
+
+  if(!nis){
+
+    status(
+      "❌ NIS belum diisi.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  kirimAbsensi(
+    nis,
+    jenis
+  );
+
+}
+
+
+/* =========================
+   STOP
+========================= */
+
+async function stopScanner(){
+
+  if(!scanner){
+
+    status(
+      "Scanner belum berjalan.",
+      "warning"
+    );
+
+    return;
+  }
+
+
+  try{
+
+    await scanner.stop();
+
+    scanner.clear();
+
+  }catch(e){
+
+    console.log(e);
+
+  }
+
+
+  scanner = null;
+
+  sedangScan = false;
+
+
+  status(
+    "⛔ Scanner dihentikan.",
+    "warning"
+  );
+
+}
+
+
+/* =========================
+   STATUS
+========================= */
+
+function status(
+  pesan,
+  tipe
+){
+
+  const el =
+    document.getElementById(
+      "status"
+    );
+
+  el.textContent =
+    pesan;
+
+  el.className =
+    "status " +
+    (tipe || "");
+
+}
+
+</script>
+
+</body>
+</html>v
