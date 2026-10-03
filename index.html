@@ -108,10 +108,6 @@ input:focus{
   cursor:pointer;
 }
 
-.btn:hover{
-  opacity:.92;
-}
-
 .btn.red{
   background:#b91c1c;
 }
@@ -387,8 +383,8 @@ input:focus{
 
   <p class="info">
 
-    Masukkan NIS siswa untuk melakukan pengujian
-    pengiriman data ke sistem.
+    Gunakan <b>1001</b> untuk mencoba siswa contoh
+    Ahmad Fauzi kelas VII A.
 
   </p>
 
@@ -396,7 +392,7 @@ input:focus{
   <input
     id="nisManual"
     type="text"
-    placeholder="Masukkan NIS">
+    placeholder="Masukkan NIS, contoh 1001">
 
 
   <button
@@ -437,31 +433,23 @@ let scanner = null;
 
 let kameraAktif = false;
 
-/*
- * Menandakan apakah sedang mengirim data.
- *
- * Penting:
- * Scanner TIDAK lagi dipause.
- * QR lain tetap boleh terbaca setelah proses selesai.
- */
 let sedangProses = false;
 
-
-/*
- * Menyimpan NIS terakhir dan waktu scan.
- *
- * Digunakan untuk mencegah QR yang sama
- * terbaca berkali-kali dalam waktu sangat singkat.
- */
 let qrTerakhir = "";
 
 let waktuQRTerakhir = 0;
 
 
-/*
- * Jeda anti-double scan untuk QR yang sama.
- */
-const BATAS_DOUBLE_SCAN = 2500;
+/* =====================================================
+   INPUT SCANNER USB / HID
+   VSC PB-333U bekerja seperti keyboard USB.
+===================================================== */
+
+let bufferScannerUSB = "";
+
+let timerScannerUSB = null;
+
+let waktuKeyUSB = 0;
 
 
 /* =====================================================
@@ -473,12 +461,10 @@ window.addEventListener(
   function(){
 
     const url =
-      localStorage.getItem("scriptUrl");
+      localStorage.getItem(
+        "scriptUrl"
+      );
 
-
-    /*
-     * Tampilkan URL yang sudah tersimpan.
-     */
 
     if(url){
 
@@ -488,15 +474,6 @@ window.addEventListener(
 
     }
 
-
-    /*
-     * Baca jenis dari URL.
-     *
-     * ?jenis=KEHADIRAN
-     * ?jenis=DHUHA
-     * ?jenis=DHUHUR
-     * ?jenis=MADIN
-     */
 
     const params =
       new URLSearchParams(
@@ -535,11 +512,6 @@ window.addEventListener(
     }
 
 
-    /*
-     * Kalau URL sudah tersimpan,
-     * otomatis buka kamera.
-     */
-
     if(url){
 
       setTimeout(
@@ -555,6 +527,155 @@ window.addEventListener(
 
   }
 );
+
+
+/* =====================================================
+   SCANNER USB HID
+===================================================== */
+
+window.addEventListener(
+  "keydown",
+  function(event){
+
+    const key = event.key;
+
+    const sekarang = Date.now();
+
+
+    /*
+     * VSC PB-333U mengirim hasil scan
+     * sebagai ketikan keyboard USB.
+     */
+
+    if (
+      key === "Enter" ||
+      key === "Tab"
+    ) {
+
+      if (
+        bufferScannerUSB.length >= 3
+      ) {
+
+        event.preventDefault();
+
+        prosesScanUSB(
+          bufferScannerUSB
+        );
+
+        bufferScannerUSB = "";
+
+        waktuKeyUSB = 0;
+
+      }
+
+      return;
+
+    }
+
+
+    /*
+     * Hanya tangkap angka.
+     */
+
+    if (
+      !/^[0-9]$/.test(key)
+    ) {
+
+      return;
+
+    }
+
+
+    /*
+     * Jika jarak antar karakter
+     * terlalu lama, mulai data baru.
+     */
+
+    if (
+      waktuKeyUSB &&
+      sekarang - waktuKeyUSB > 350
+    ) {
+
+      bufferScannerUSB = "";
+
+    }
+
+
+    waktuKeyUSB =
+      sekarang;
+
+    bufferScannerUSB +=
+      key;
+
+
+    clearTimeout(
+      timerScannerUSB
+    );
+
+
+    /*
+     * Beberapa scanner tidak mengirim Enter.
+     * Maka otomatis proses setelah jeda.
+     */
+
+    timerScannerUSB =
+      setTimeout(
+        function(){
+
+          if (
+            bufferScannerUSB.length >= 3
+          ) {
+
+            const hasil =
+              bufferScannerUSB;
+
+            bufferScannerUSB = "";
+
+            waktuKeyUSB = 0;
+
+            prosesScanUSB(
+              hasil
+            );
+
+          }
+
+        },
+        140
+      );
+
+  },
+  true
+);
+
+
+function prosesScanUSB(
+  nis
+){
+
+  nis =
+    String(
+      nis || ""
+    ).trim();
+
+
+  if(!nis){
+
+    return;
+
+  }
+
+
+  console.log(
+    "SCAN USB VSC PB-333U:",
+    nis
+  );
+
+
+  qrBerhasil(
+    nis
+  );
+
+}
 
 
 /* =====================================================
@@ -602,7 +723,9 @@ function simpanURL(){
 
 
   if(
-    !url.includes("/exec")
+    !url.includes(
+      "/exec"
+    )
   ){
 
     tampilStatus(
@@ -669,13 +792,9 @@ function pilihJenis(
     );
 
 
-  if(tombol){
-
-    tombol.classList.add(
-      "active"
-    );
-
-  }
+  tombol.classList.add(
+    "active"
+  );
 
 
   tampilStatus(
@@ -690,35 +809,43 @@ function pilihJenis(
 
 
 /* =====================================================
-   NAMA JENIS
+   NAMA JENIS ABSENSI
 ===================================================== */
 
 function namaJenis(
   jenis
 ){
 
-  if(jenis === "KEHADIRAN"){
+  if(
+    jenis === "KEHADIRAN"
+  ){
 
     return "Kehadiran";
 
   }
 
 
-  if(jenis === "DHUHA"){
+  if(
+    jenis === "DHUHA"
+  ){
 
     return "Dhuha";
 
   }
 
 
-  if(jenis === "DHUHUR"){
+  if(
+    jenis === "DHUHUR"
+  ){
 
     return "Dhuhur";
 
   }
 
 
-  if(jenis === "MADIN"){
+  if(
+    jenis === "MADIN"
+  ){
 
     return "Madin";
 
@@ -736,16 +863,11 @@ function namaJenis(
 
 async function mulaiKamera(){
 
-  /*
-   * Kalau kamera sudah aktif,
-   * jangan membuat scanner baru.
-   */
-
   if(kameraAktif){
 
     tampilStatus(
-      "📷 Kamera sudah aktif. Silakan arahkan QR berikutnya.",
-      "success"
+      "⚠️ Kamera sudah aktif.",
+      "warning"
     );
 
     return;
@@ -779,10 +901,6 @@ async function mulaiKamera(){
     );
 
 
-    /*
-     * Ambil kamera yang tersedia.
-     */
-
     const cameras =
       await Html5Qrcode.getCameras();
 
@@ -799,10 +917,6 @@ async function mulaiKamera(){
     }
 
 
-    /*
-     * Prioritaskan kamera belakang.
-     */
-
     let kamera =
       cameras.find(
         function(c){
@@ -816,11 +930,6 @@ async function mulaiKamera(){
       );
 
 
-    /*
-     * Jika tidak ditemukan,
-     * gunakan kamera terakhir.
-     */
-
     if(!kamera){
 
       kamera =
@@ -831,19 +940,11 @@ async function mulaiKamera(){
     }
 
 
-    /*
-     * Buat scanner.
-     */
-
     scanner =
       new Html5Qrcode(
         "reader"
       );
 
-
-    /*
-     * Jalankan scanner.
-     */
 
     await scanner.start(
 
@@ -896,10 +997,6 @@ async function mulaiKamera(){
       },
 
 
-      /*
-       * QR berhasil dibaca.
-       */
-
       function(decodedText){
 
         qrBerhasil(
@@ -908,11 +1005,6 @@ async function mulaiKamera(){
 
       },
 
-
-      /*
-       * Error pembacaan biasa
-       * tidak perlu ditampilkan.
-       */
 
       function(errorMessage){
 
@@ -970,9 +1062,12 @@ async function qrBerhasil(
   isiQR
 ){
 
-  /*
-   * Bersihkan isi QR.
-   */
+  if(sedangProses){
+
+    return;
+
+  }
+
 
   isiQR =
     String(
@@ -987,9 +1082,40 @@ async function qrBerhasil(
   }
 
 
-  /*
-   * Ambil NIS.
-   */
+  const sekarang =
+    Date.now();
+
+
+  if(
+    isiQR === qrTerakhir &&
+    (
+      sekarang -
+      waktuQRTerakhir
+    ) < 4000
+  ){
+
+    return;
+
+  }
+
+
+  qrTerakhir =
+    isiQR;
+
+
+  waktuQRTerakhir =
+    sekarang;
+
+
+  sedangProses =
+    true;
+
+
+  console.log(
+    "QR TERBACA:",
+    isiQR
+  );
+
 
   const nis =
     ambilNIS(
@@ -1004,77 +1130,19 @@ async function qrBerhasil(
       "error"
     );
 
-    return;
 
-  }
-
-
-  /*
-   * ===================================================
-   * ANTI DOUBLE SCAN
-   * ===================================================
-   *
-   * Hanya QR/NIS yang SAMA yang ditolak sementara.
-   *
-   * Siswa berbeda tetap boleh masuk.
-   */
-
-  const sekarang =
-    Date.now();
-
-
-  if(
-    String(nis) ===
-      String(qrTerakhir) &&
-    (
-      sekarang -
-      waktuQRTerakhir
-    ) < BATAS_DOUBLE_SCAN
-  ){
-
-    console.log(
-      "QR YANG SAMA DIABAIKAN:",
-      nis
-    );
+    sedangProses =
+      false;
 
     return;
 
   }
 
 
-  /*
-   * Catat QR terakhir.
-   */
-
-  qrTerakhir =
-    String(nis);
-
-  waktuQRTerakhir =
-    sekarang;
-
-
-  console.log(
-    "QR BARU:",
-    nis
-  );
-
-
-  /*
-   * Tampilkan hasil.
-   */
-
-  const hasil =
-    document.getElementById(
-      "hasil"
-    );
-
-
-  if(hasil){
-
-    hasil.style.display =
-      "block";
-
-  }
+  document.getElementById(
+    "hasil"
+  ).style.display =
+    "block";
 
 
   document.getElementById(
@@ -1099,180 +1167,34 @@ async function qrBerhasil(
   );
 
 
-  /*
-   * ===================================================
-   * PENTING
-   * ===================================================
-   *
-   * Kamera TIDAK DI-PAUSE.
-   *
-   * Ini sengaja agar scanner bisa terus aktif.
-   *
-   * Callback scan berikutnya akan tetap masuk,
-   * tetapi pengiriman yang sedang berlangsung
-   * dilindungi oleh antrean.
-   */
+  try{
 
-  tambahAntrean(
-    nis,
-    jenisAbsensi
-  );
+    if(
+      scanner &&
+      kameraAktif
+    ){
 
-}
-
-
-/* =====================================================
-   ANTREAN PENGIRIMAN
-===================================================== */
-
-/*
- * Antrean digunakan agar beberapa QR yang
- * terbaca kamera tidak hilang.
- */
-
-let antreanScan = [];
-
-let sedangKirimAntrean = false;
-
-
-/*
- * Tambahkan scan ke antrean.
- */
-
-function tambahAntrean(
-  nis,
-  jenis
-){
-
-  /*
-   * Jangan memasukkan NIS yang sama
-   * jika masih ada di antrean.
-   */
-
-  const sudahAda =
-    antreanScan.some(
-      function(item){
-
-        return (
-          String(item.nis) ===
-          String(nis)
-        );
-
-      }
-    );
-
-
-  if(
-    sudahAda &&
-    sedangKirimAntrean
-  ){
-
-    console.log(
-      "NIS sudah ada di antrean:",
-      nis
-    );
-
-    return;
-
-  }
-
-
-  antreanScan.push({
-
-    nis:String(nis),
-
-    jenis:String(jenis)
-
-  });
-
-
-  prosesAntrean();
-
-}
-
-
-/* =====================================================
-   PROSES ANTREAN
-===================================================== */
-
-function prosesAntrean(){
-
-  /*
-   * Kalau masih mengirim,
-   * tunggu sampai selesai.
-   */
-
-  if(sedangKirimAntrean){
-
-    return;
-
-  }
-
-
-  /*
-   * Kalau antrean kosong,
-   * selesai.
-   */
-
-  if(
-    antreanScan.length === 0
-  ){
-
-    sedangProses =
-      false;
-
-    tampilStatus(
-      "📷 Scanner aktif. Silakan scan QR berikutnya.",
-      "success"
-    );
-
-    return;
-
-  }
-
-
-  sedangKirimAntrean =
-    true;
-
-  sedangProses =
-    true;
-
-
-  const data =
-    antreanScan.shift();
-
-
-  kirimKeAppsScript(
-
-    data.nis,
-
-    data.jenis,
-
-    function(){
-
-      /*
-       * Pengiriman selesai.
-       */
-
-      sedangKirimAntrean =
-        false;
-
-
-      /*
-       * Lanjutkan antrean berikutnya.
-       */
-
-      setTimeout(
-        function(){
-
-          prosesAntrean();
-
-        },
-        300
+      scanner.pause(
+        true
       );
 
     }
 
+  }
+
+  catch(error){
+
+    console.log(
+      "Pause scanner:",
+      error
+    );
+
+  }
+
+
+  kirimKeAppsScript(
+    nis,
+    jenisAbsensi
   );
 
 }
@@ -1292,10 +1214,6 @@ function ambilNIS(
     ).trim();
 
 
-  /*
-   * QR hanya berupa angka.
-   */
-
   if(
     /^\d+$/.test(
       isi
@@ -1307,12 +1225,6 @@ function ambilNIS(
   }
 
 
-  /*
-   * QR berbentuk JSON.
-   *
-   * {"nis":"1001"}
-   */
-
   try{
 
     const data =
@@ -1323,8 +1235,7 @@ function ambilNIS(
 
     if(
       data &&
-      data.nis !== undefined &&
-      data.nis !== null
+      data.nis
     ){
 
       return String(
@@ -1336,8 +1247,7 @@ function ambilNIS(
 
     if(
       data &&
-      data.NIS !== undefined &&
-      data.NIS !== null
+      data.NIS
     ){
 
       return String(
@@ -1353,17 +1263,9 @@ function ambilNIS(
   }
 
 
-  /*
-   * Format:
-   *
-   * NIS:1001
-   * NIS=1001
-   * NIS 1001
-   */
-
   const pola =
     isi.match(
-      /NIS\s*[:=]?\s*(\d+)/i
+      /NIS\s*[:=]?\s*(\d{3,15})/i
     );
 
 
@@ -1374,13 +1276,9 @@ function ambilNIS(
   }
 
 
-  /*
-   * Cari angka.
-   */
-
   const angka =
     isi.match(
-      /\d{3,30}/
+      /\d{3,15}/
     );
 
 
@@ -1402,8 +1300,7 @@ function ambilNIS(
 
 function kirimKeAppsScript(
   nis,
-  jenis,
-  callback
+  jenis
 ){
 
   const url =
@@ -1420,67 +1317,45 @@ function kirimKeAppsScript(
     );
 
 
-    if(callback){
-
-      callback();
-
-    }
+    prosesSelesai();
 
     return;
 
   }
 
 
-  /*
-   * ===================================================
-   * BUAT IFRAME UNIK
-   * ===================================================
-   *
-   * Setiap scan mendapatkan iframe sendiri.
-   *
-   * Jadi scan kedua tidak menggunakan
-   * target iframe scan pertama.
-   */
-
-  const nomor =
-    Date.now() +
-    "_" +
-    Math.floor(
-      Math.random() * 100000
+  let frame =
+    document.getElementById(
+      "hasilAbsensiFrame"
     );
 
 
-  const namaFrame =
-    "absensiFrame_" +
-    nomor;
+  if(!frame){
+
+    frame =
+      document.createElement(
+        "iframe"
+      );
 
 
-  const frame =
-    document.createElement(
-      "iframe"
+    frame.id =
+      "hasilAbsensiFrame";
+
+
+    frame.name =
+      "hasilAbsensiFrame";
+
+
+    frame.style.display =
+      "none";
+
+
+    document.body.appendChild(
+      frame
     );
 
+  }
 
-  frame.name =
-    namaFrame;
-
-
-  frame.id =
-    namaFrame;
-
-
-  frame.style.display =
-    "none";
-
-
-  document.body.appendChild(
-    frame
-  );
-
-
-  /*
-   * Buat form baru.
-   */
 
   const form =
     document.createElement(
@@ -1497,16 +1372,12 @@ function kirimKeAppsScript(
 
 
   form.target =
-    namaFrame;
+    "hasilAbsensiFrame";
 
 
   form.style.display =
     "none";
 
-
-  /*
-   * INPUT NIS
-   */
 
   const inputNis =
     document.createElement(
@@ -1522,19 +1393,11 @@ function kirimKeAppsScript(
     "nis";
 
 
-  /*
-   * Paksa sebagai string.
-   */
-
   inputNis.value =
     String(
       nis
     );
 
-
-  /*
-   * INPUT JENIS
-   */
 
   const inputJenis =
     document.createElement(
@@ -1556,10 +1419,6 @@ function kirimKeAppsScript(
     );
 
 
-  /*
-   * Tambahkan input.
-   */
-
   form.appendChild(
     inputNis
   );
@@ -1576,18 +1435,14 @@ function kirimKeAppsScript(
 
 
   console.log(
-    "MENGIRIM DATA ABSENSI:",
+    "MENGIRIM DATA:",
     {
-      nis:String(nis),
-      jenis:String(jenis),
+      nis:nis,
+      jenis:jenis,
       url:url
     }
   );
 
-
-  /*
-   * Submit POST.
-   */
 
   try{
 
@@ -1604,47 +1459,38 @@ function kirimKeAppsScript(
 
 
     tampilStatus(
-      "❌ Gagal mengirim NIS " +
-      nis +
-      ".",
+      "❌ Gagal mengirim data.",
       "error"
     );
 
 
-    bersihkanPengiriman(
-      form,
-      frame
-    );
+    try{
 
-
-    if(callback){
-
-      callback();
+      form.remove();
 
     }
+
+    catch(e){}
+
+
+    prosesSelesai();
 
     return;
 
   }
 
 
-  /*
-   * ===================================================
-   * SELESAI KIRIM
-   * ===================================================
-   *
-   * Apps Script menerima POST secara langsung.
-   *
-   * Kita tidak menunggu isi iframe karena
-   * cross-origin browser tidak mengizinkan
-   * membaca respons Apps Script.
-   *
-   * Setelah jeda singkat, pengiriman dianggap
-   * selesai dan scanner kembali siap.
-   */
-
   setTimeout(
     function(){
+
+      try{
+
+        form.remove();
+
+      }
+
+      catch(e){}
+
 
       tampilStatus(
         "✅ NIS " +
@@ -1653,20 +1499,6 @@ function kirimKeAppsScript(
         "success"
       );
 
-
-      /*
-       * Bersihkan form dan iframe.
-       */
-
-      bersihkanPengiriman(
-        form,
-        frame
-      );
-
-
-      /*
-       * Sembunyikan hasil setelah beberapa detik.
-       */
 
       setTimeout(
         function(){
@@ -1685,62 +1517,87 @@ function kirimKeAppsScript(
           }
 
         },
-        1800
+        2500
       );
 
 
-      /*
-       * Callback ke antrean.
-       */
+      sedangProses =
+        false;
 
-      if(callback){
 
-        callback();
-
-      }
+      lanjutScanner();
 
     },
-    1200
+    1500
   );
 
 }
 
 
 /* =====================================================
-   BERSIHKAN FORM + IFRAME
+   LANJUTKAN SCANNER OTOMATIS
 ===================================================== */
 
-function bersihkanPengiriman(
-  form,
-  frame
-){
+function lanjutScanner(){
 
-  try{
+  if(
+    !scanner ||
+    !kameraAktif
+  ){
 
-    if(form){
-
-      form.remove();
-
-    }
-
-  }
-
-  catch(e){
+    return;
 
   }
 
 
   try{
 
-    if(frame){
+    scanner.resume();
 
-      frame.remove();
 
-    }
+    tampilStatus(
+      "📷 Scanner aktif kembali. Silakan scan QR berikutnya.",
+      "success"
+    );
 
   }
 
-  catch(e){
+  catch(error){
+
+    console.error(
+      "RESUME ERROR:",
+      error
+    );
+
+
+    setTimeout(
+      function(){
+
+        try{
+
+          if(
+            scanner &&
+            kameraAktif
+          ){
+
+            scanner.resume();
+
+          }
+
+        }
+
+        catch(e){
+
+          console.error(
+            "RESUME ULANG ERROR:",
+            e
+          );
+
+        }
+
+      },
+      500
+    );
 
   }
 
@@ -1753,16 +1610,10 @@ function bersihkanPengiriman(
 
 function kirimManual(){
 
-  const input =
+  const nis =
     document.getElementById(
       "nisManual"
-    );
-
-
-  const nis =
-    String(
-      input.value || ""
-    ).trim();
+    ).value.trim();
 
 
   if(!nis){
@@ -1777,9 +1628,17 @@ function kirimManual(){
   }
 
 
-  /*
-   * Tampilkan hasil.
-   */
+  if(sedangProses){
+
+    tampilStatus(
+      "⏳ Masih ada data yang sedang dikirim.",
+      "warning"
+    );
+
+    return;
+
+  }
+
 
   document.getElementById(
     "hasil"
@@ -1801,6 +1660,10 @@ function kirimManual(){
     );
 
 
+  sedangProses =
+    true;
+
+
   tampilStatus(
     "⏳ Mengirim NIS " +
     nis +
@@ -1809,22 +1672,10 @@ function kirimManual(){
   );
 
 
-  /*
-   * Masukkan ke antrean.
-   */
-
-  tambahAntrean(
+  kirimKeAppsScript(
     nis,
     jenisAbsensi
   );
-
-
-  /*
-   * Kosongkan input.
-   */
-
-  input.value =
-    "";
 
 }
 
@@ -1891,14 +1742,6 @@ async function hentikanKamera(){
     false;
 
 
-  sedangKirimAntrean =
-    false;
-
-
-  antreanScan =
-    [];
-
-
   qrTerakhir =
     "";
 
@@ -1910,6 +1753,28 @@ async function hentikanKamera(){
   tampilStatus(
     "⛔ Scanner dihentikan.",
     "warning"
+  );
+
+}
+
+
+/* =====================================================
+   PROSES SELESAI
+===================================================== */
+
+function prosesSelesai(){
+
+  sedangProses =
+    false;
+
+
+  setTimeout(
+    function(){
+
+      lanjutScanner();
+
+    },
+    500
   );
 
 }
