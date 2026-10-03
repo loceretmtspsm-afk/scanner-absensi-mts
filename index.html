@@ -108,6 +108,10 @@ input:focus{
   cursor:pointer;
 }
 
+.btn:hover{
+  opacity:.92;
+}
+
 .btn.red{
   background:#b91c1c;
 }
@@ -149,25 +153,57 @@ input:focus{
   color:#92400e;
 }
 
+
+/* =====================================================
+   HASIL SCAN
+===================================================== */
+
 .hasil{
   display:none;
   background:#ecfdf5;
   border:2px solid #22c55e;
   border-radius:15px;
-  padding:18px;
+  padding:20px;
   margin-top:15px;
   text-align:center;
 }
 
-.hasil .nis{
-  font-size:30px;
+.hasil .judulHasil{
+  font-size:15px;
+  color:#166534;
+  font-weight:bold;
+}
+
+.hasil .namaSiswa{
+  font-size:28px;
+  font-weight:bold;
+  color:#166534;
+  margin-top:8px;
+}
+
+.hasil .kelasSiswa{
+  font-size:18px;
+  font-weight:bold;
+  color:#334155;
+  margin-top:5px;
+}
+
+.hasil .nisSiswa{
+  font-size:14px;
+  color:#64748b;
+  margin-top:8px;
+}
+
+.hasil .jenisNama{
+  margin-top:8px;
   font-weight:bold;
   color:#166534;
 }
 
-.hasil .jenisNama{
-  margin-top:5px;
-  font-weight:bold;
+.hasil .statusKirim{
+  margin-top:10px;
+  font-size:14px;
+  color:#475569;
 }
 
 .info{
@@ -197,6 +233,10 @@ input:focus{
     grid-template-columns:1fr 1fr;
   }
 
+  .hasil .namaSiswa{
+    font-size:24px;
+  }
+
 }
 
 </style>
@@ -204,6 +244,7 @@ input:focus{
 </head>
 
 <body>
+
 
 <!-- =====================================================
      HEADER
@@ -216,6 +257,7 @@ input:focus{
   <p>MTs PSM Sugihwaras Loceret</p>
 
 </div>
+
 
 
 <div class="container">
@@ -243,11 +285,14 @@ input:focus{
   </button>
 
   <p class="info">
+
     Masukkan URL Web App Apps Script yang berakhiran
     <b>/exec</b>.
+
   </p>
 
 </div>
+
 
 
 <!-- =====================================================
@@ -301,6 +346,7 @@ input:focus{
 </div>
 
 
+
 <!-- =====================================================
      SCANNER
 ===================================================== -->
@@ -339,30 +385,60 @@ input:focus{
   </div>
 
 
-  <!-- HASIL QR -->
+  <!-- ===================================================
+       HASIL QR
+  =================================================== -->
 
   <div
     id="hasil"
     class="hasil">
 
-    <div>
+    <div class="judulHasil">
+
       ✅ QR BERHASIL DIBACA
+
     </div>
 
+
+    <!-- NAMA SISWA -->
+
+    <div
+      id="hasilNama"
+      class="namaSiswa">
+
+    </div>
+
+
+    <!-- KELAS -->
+
+    <div
+      id="hasilKelas"
+      class="kelasSiswa">
+
+    </div>
+
+
+    <!-- NIS -->
 
     <div
       id="hasilNis"
-      class="nis">
+      class="nisSiswa">
+
     </div>
 
+
+    <!-- JENIS ABSENSI -->
 
     <div
       id="hasilJenis"
       class="jenisNama">
+
     </div>
 
 
-    <div style="margin-top:8px">
+    <div
+      id="hasilKirim"
+      class="statusKirim">
 
       Data sedang dikirim ke sistem...
 
@@ -371,6 +447,7 @@ input:focus{
   </div>
 
 </div>
+
 
 
 <!-- =====================================================
@@ -383,8 +460,7 @@ input:focus{
 
   <p class="info">
 
-    Gunakan <b>1001</b> untuk mencoba siswa contoh
-    Ahmad Fauzi kelas VII A.
+    Masukkan NIS siswa untuk mencoba pengiriman absensi.
 
   </p>
 
@@ -392,7 +468,7 @@ input:focus{
   <input
     id="nisManual"
     type="text"
-    placeholder="Masukkan NIS, contoh 1001">
+    placeholder="Masukkan NIS">
 
 
   <button
@@ -409,6 +485,7 @@ input:focus{
 </div>
 
 
+
 <!-- =====================================================
      FOOTER
 ===================================================== -->
@@ -421,7 +498,9 @@ input:focus{
 </div>
 
 
+
 <script>
+
 
 /* =====================================================
    VARIABEL UTAMA
@@ -438,18 +517,6 @@ let sedangProses = false;
 let qrTerakhir = "";
 
 let waktuQRTerakhir = 0;
-
-
-/* =====================================================
-   INPUT SCANNER USB / HID
-   VSC PB-333U bekerja seperti keyboard USB.
-===================================================== */
-
-let bufferScannerUSB = "";
-
-let timerScannerUSB = null;
-
-let waktuKeyUSB = 0;
 
 
 /* =====================================================
@@ -527,155 +594,6 @@ window.addEventListener(
 
   }
 );
-
-
-/* =====================================================
-   SCANNER USB HID
-===================================================== */
-
-window.addEventListener(
-  "keydown",
-  function(event){
-
-    const key = event.key;
-
-    const sekarang = Date.now();
-
-
-    /*
-     * VSC PB-333U mengirim hasil scan
-     * sebagai ketikan keyboard USB.
-     */
-
-    if (
-      key === "Enter" ||
-      key === "Tab"
-    ) {
-
-      if (
-        bufferScannerUSB.length >= 3
-      ) {
-
-        event.preventDefault();
-
-        prosesScanUSB(
-          bufferScannerUSB
-        );
-
-        bufferScannerUSB = "";
-
-        waktuKeyUSB = 0;
-
-      }
-
-      return;
-
-    }
-
-
-    /*
-     * Hanya tangkap angka.
-     */
-
-    if (
-      !/^[0-9]$/.test(key)
-    ) {
-
-      return;
-
-    }
-
-
-    /*
-     * Jika jarak antar karakter
-     * terlalu lama, mulai data baru.
-     */
-
-    if (
-      waktuKeyUSB &&
-      sekarang - waktuKeyUSB > 350
-    ) {
-
-      bufferScannerUSB = "";
-
-    }
-
-
-    waktuKeyUSB =
-      sekarang;
-
-    bufferScannerUSB +=
-      key;
-
-
-    clearTimeout(
-      timerScannerUSB
-    );
-
-
-    /*
-     * Beberapa scanner tidak mengirim Enter.
-     * Maka otomatis proses setelah jeda.
-     */
-
-    timerScannerUSB =
-      setTimeout(
-        function(){
-
-          if (
-            bufferScannerUSB.length >= 3
-          ) {
-
-            const hasil =
-              bufferScannerUSB;
-
-            bufferScannerUSB = "";
-
-            waktuKeyUSB = 0;
-
-            prosesScanUSB(
-              hasil
-            );
-
-          }
-
-        },
-        140
-      );
-
-  },
-  true
-);
-
-
-function prosesScanUSB(
-  nis
-){
-
-  nis =
-    String(
-      nis || ""
-    ).trim();
-
-
-  if(!nis){
-
-    return;
-
-  }
-
-
-  console.log(
-    "SCAN USB VSC PB-333U:",
-    nis
-  );
-
-
-  qrBerhasil(
-    nis
-  );
-
-}
 
 
 /* =====================================================
@@ -1117,10 +1035,25 @@ async function qrBerhasil(
   );
 
 
-  const nis =
-    ambilNIS(
+  /*
+   * Ambil seluruh data dari QR
+   */
+  const dataQR =
+    ambilDataQR(
       isiQR
     );
+
+
+  const nis =
+    dataQR.nis;
+
+
+  const nama =
+    dataQR.nama;
+
+
+  const kelas =
+    dataQR.kelas;
 
 
   if(!nis){
@@ -1139,6 +1072,10 @@ async function qrBerhasil(
   }
 
 
+  /*
+   * Tampilkan hasil
+   */
+
   document.getElementById(
     "hasil"
   ).style.display =
@@ -1146,26 +1083,57 @@ async function qrBerhasil(
 
 
   document.getElementById(
+    "hasilNama"
+  ).textContent =
+    nama || "Nama belum tersedia";
+
+
+  document.getElementById(
+    "hasilKelas"
+  ).textContent =
+    kelas
+      ? "Kelas " + kelas
+      : "";
+
+
+  document.getElementById(
     "hasilNis"
   ).textContent =
-    nis;
+    "NIS: " + nis;
 
 
   document.getElementById(
     "hasilJenis"
   ).textContent =
+    "Absensi: " +
     namaJenis(
       jenisAbsensi
     );
 
 
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Data " +
+    (
+      nama || ("NIS " + nis)
+    ) +
+    " sedang dikirim ke Google Sheets...";
+
+
   tampilStatus(
-    "⏳ QR terbaca! NIS " +
-    nis +
+    "⏳ QR terbaca: " +
+    (
+      nama || ("NIS " + nis)
+    ) +
     " sedang dikirim ke Google Sheets...",
     "warning"
   );
 
+
+  /*
+   * Pause scanner sementara
+   */
 
   try{
 
@@ -1192,19 +1160,29 @@ async function qrBerhasil(
   }
 
 
+  /*
+   * Kirim ke Apps Script
+   *
+   * Nama dan kelas ikut dikirim.
+   * Apps Script lama tetap kompatibel
+   * karena parameter tambahan boleh diabaikan.
+   */
+
   kirimKeAppsScript(
     nis,
-    jenisAbsensi
+    jenisAbsensi,
+    nama,
+    kelas
   );
 
 }
 
 
 /* =====================================================
-   AMBIL NIS DARI QR
+   AMBIL DATA QR
 ===================================================== */
 
-function ambilNIS(
+function ambilDataQR(
   isi
 ){
 
@@ -1214,16 +1192,17 @@ function ambilNIS(
     ).trim();
 
 
-  if(
-    /^\d+$/.test(
-      isi
-    )
-  ){
-
-    return isi;
-
-  }
-
+  /*
+   * QR JSON
+   *
+   * Contoh:
+   *
+   * {
+   *   "nis":"121235180009250018",
+   *   "nama":"AHMAD FULAN",
+   *   "kelas":"VII A"
+   * }
+   */
 
   try{
 
@@ -1233,26 +1212,48 @@ function ambilNIS(
       );
 
 
-    if(
-      data &&
-      data.nis
-    ){
+    if(data){
 
-      return String(
-        data.nis
-      ).trim();
-
-    }
+      const nis =
+        data.nis ||
+        data.NIS ||
+        "";
 
 
-    if(
-      data &&
-      data.NIS
-    ){
+      const nama =
+        data.nama ||
+        data.NAMA ||
+        data.name ||
+        data.namaSiswa ||
+        "";
 
-      return String(
-        data.NIS
-      ).trim();
+
+      const kelas =
+        data.kelas ||
+        data.KELAS ||
+        data.class ||
+        "";
+
+
+      if(nis){
+
+        return {
+
+          nis:String(
+            nis
+          ).trim(),
+
+          nama:String(
+            nama
+          ).trim(),
+
+          kelas:String(
+            kelas
+          ).trim()
+
+        };
+
+      }
 
     }
 
@@ -1260,36 +1261,118 @@ function ambilNIS(
 
   catch(e){
 
+    /*
+     * Bukan JSON.
+     * Lanjutkan ke format berikutnya.
+     */
+
   }
 
 
+  /*
+   * QR hanya angka
+   */
+
+  if(
+    /^\d+$/.test(
+      isi
+    )
+  ){
+
+    return {
+
+      nis:isi,
+
+      nama:"",
+
+      kelas:""
+
+    };
+
+  }
+
+
+  /*
+   * Format:
+   *
+   * NIS:1001
+   */
+
   const pola =
     isi.match(
-      /NIS\s*[:=]?\s*(\d{3,15})/i
+      /NIS\s*[:=]?\s*(\d{3,30})/i
     );
 
 
   if(pola){
 
-    return pola[1];
+    return {
+
+      nis:pola[1],
+
+      nama:"",
+
+      kelas:""
+
+    };
 
   }
 
 
+  /*
+   * Cari angka
+   */
+
   const angka =
     isi.match(
-      /\d{3,15}/
+      /\d{3,30}/
     );
 
 
   if(angka){
 
-    return angka[0];
+    return {
+
+      nis:angka[0],
+
+      nama:"",
+
+      kelas:""
+
+    };
 
   }
 
 
-  return "";
+  return {
+
+    nis:"",
+
+    nama:"",
+
+    kelas:""
+
+  };
+
+}
+
+
+/* =====================================================
+   FUNGSI LAMA — AMBIL NIS
+   Tetap dipertahankan untuk kompatibilitas.
+===================================================== */
+
+function ambilNIS(
+  isi
+){
+
+  const data =
+    ambilDataQR(
+      isi
+    );
+
+
+  return data.nis || "";
 
 }
 
@@ -1300,7 +1383,9 @@ function ambilNIS(
 
 function kirimKeAppsScript(
   nis,
-  jenis
+  jenis,
+  nama,
+  kelas
 ){
 
   const url =
@@ -1379,6 +1464,10 @@ function kirimKeAppsScript(
     "none";
 
 
+  /*
+   * NIS
+   */
+
   const inputNis =
     document.createElement(
       "input"
@@ -1398,6 +1487,10 @@ function kirimKeAppsScript(
       nis
     );
 
+
+  /*
+   * JENIS
+   */
 
   const inputJenis =
     document.createElement(
@@ -1419,6 +1512,54 @@ function kirimKeAppsScript(
     );
 
 
+  /*
+   * NAMA
+   */
+
+  const inputNama =
+    document.createElement(
+      "input"
+    );
+
+
+  inputNama.type =
+    "hidden";
+
+
+  inputNama.name =
+    "nama";
+
+
+  inputNama.value =
+    String(
+      nama || ""
+    );
+
+
+  /*
+   * KELAS
+   */
+
+  const inputKelas =
+    document.createElement(
+      "input"
+    );
+
+
+  inputKelas.type =
+    "hidden";
+
+
+  inputKelas.name =
+    "kelas";
+
+
+  inputKelas.value =
+    String(
+      kelas || ""
+    );
+
+
   form.appendChild(
     inputNis
   );
@@ -1426,6 +1567,16 @@ function kirimKeAppsScript(
 
   form.appendChild(
     inputJenis
+  );
+
+
+  form.appendChild(
+    inputNama
+  );
+
+
+  form.appendChild(
+    inputKelas
   );
 
 
@@ -1438,6 +1589,8 @@ function kirimKeAppsScript(
     "MENGIRIM DATA:",
     {
       nis:nis,
+      nama:nama,
+      kelas:kelas,
       jenis:jenis,
       url:url
     }
@@ -1480,6 +1633,10 @@ function kirimKeAppsScript(
   }
 
 
+  /*
+   * Tunggu Apps Script
+   */
+
   setTimeout(
     function(){
 
@@ -1492,13 +1649,38 @@ function kirimKeAppsScript(
       catch(e){}
 
 
+      const namaTampil =
+        nama ||
+        ("NIS " + nis);
+
+
       tampilStatus(
-        "✅ NIS " +
-        nis +
+        "✅ " +
+        namaTampil +
         " berhasil dikirim. Scanner siap untuk QR berikutnya.",
         "success"
       );
 
+
+      const hasilKirim =
+        document.getElementById(
+          "hasilKirim"
+        );
+
+
+      if(hasilKirim){
+
+        hasilKirim.textContent =
+          "✅ " +
+          namaTampil +
+          " berhasil dicatat.";
+
+      }
+
+
+      /*
+       * Sembunyikan hasil
+       */
 
       setTimeout(
         function(){
@@ -1535,7 +1717,7 @@ function kirimKeAppsScript(
 
 
 /* =====================================================
-   LANJUTKAN SCANNER OTOMATIS
+   LANJUTKAN SCANNER
 ===================================================== */
 
 function lanjutScanner(){
@@ -1647,17 +1829,36 @@ function kirimManual(){
 
 
   document.getElementById(
+    "hasilNama"
+  ).textContent =
+    "Tes Manual";
+
+
+  document.getElementById(
+    "hasilKelas"
+  ).textContent =
+    "";
+
+
+  document.getElementById(
     "hasilNis"
   ).textContent =
-    nis;
+    "NIS: " + nis;
 
 
   document.getElementById(
     "hasilJenis"
   ).textContent =
+    "Absensi: " +
     namaJenis(
       jenisAbsensi
     );
+
+
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Mengirim data...";
 
 
   sedangProses =
@@ -1674,7 +1875,9 @@ function kirimManual(){
 
   kirimKeAppsScript(
     nis,
-    jenisAbsensi
+    jenisAbsensi,
+    "",
+    ""
   );
 
 }
@@ -1812,6 +2015,253 @@ function tampilStatus(
       tipe ||
       ""
     );
+
+}
+
+
+/* =====================================================
+   SCANNER USB VSC PB-333U
+   Tetap mendukung scanner USB keyboard.
+===================================================== */
+
+let bufferScannerUSB = "";
+
+let timerScannerUSB = null;
+
+let waktuKeyUSB = 0;
+
+
+window.addEventListener(
+  "keydown",
+  function(event){
+
+    const key =
+      event.key;
+
+
+    const sekarang =
+      Date.now();
+
+
+    /*
+     * Scanner USB biasanya mengirim
+     * Enter setelah NIS.
+     */
+
+    if(
+      key === "Enter" ||
+      key === "Tab"
+    ){
+
+      if(
+        bufferScannerUSB.length >= 3
+      ){
+
+        event.preventDefault();
+
+
+        prosesScanUSB(
+          bufferScannerUSB
+        );
+
+
+        bufferScannerUSB =
+          "";
+
+
+        waktuKeyUSB =
+          0;
+
+      }
+
+      return;
+
+    }
+
+
+    /*
+     * Hanya menerima angka.
+     */
+
+    if(
+      !/^[0-9]$/.test(
+        key
+      )
+    ){
+
+      return;
+
+    }
+
+
+    /*
+     * Jika jeda antar karakter
+     * terlalu lama, anggap scan baru.
+     */
+
+    if(
+      waktuKeyUSB &&
+      (
+        sekarang -
+        waktuKeyUSB
+      ) > 350
+    ){
+
+      bufferScannerUSB =
+        "";
+
+    }
+
+
+    waktuKeyUSB =
+      sekarang;
+
+
+    bufferScannerUSB +=
+      key;
+
+
+    clearTimeout(
+      timerScannerUSB
+    );
+
+
+    timerScannerUSB =
+      setTimeout(
+        function(){
+
+          if(
+            bufferScannerUSB.length >= 3
+          ){
+
+            const hasil =
+              bufferScannerUSB;
+
+
+            bufferScannerUSB =
+              "";
+
+
+            waktuKeyUSB =
+              0;
+
+
+            prosesScanUSB(
+              hasil
+            );
+
+          }
+
+        },
+        140
+      );
+
+  },
+  true
+);
+
+
+/* =====================================================
+   PROSES SCAN USB
+===================================================== */
+
+function prosesScanUSB(
+  nis
+){
+
+  nis =
+    String(
+      nis || ""
+    ).trim();
+
+
+  if(!nis){
+
+    return;
+
+  }
+
+
+  console.log(
+    "SCAN USB VSC PB-333U:",
+    nis
+  );
+
+
+  /*
+   * Scanner USB hanya mengirim NIS.
+   *
+   * Nama akan ditampilkan jika QR kamera
+   * membawa data nama.
+   *
+   * Untuk scanner USB, backend tetap menerima
+   * NIS seperti sistem lama.
+   */
+
+  if(sedangProses){
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "hasil"
+  ).style.display =
+    "block";
+
+
+  document.getElementById(
+    "hasilNama"
+  ).textContent =
+    "NIS " + nis;
+
+
+  document.getElementById(
+    "hasilKelas"
+  ).textContent =
+    "";
+
+
+  document.getElementById(
+    "hasilNis"
+  ).textContent =
+    "NIS: " + nis;
+
+
+  document.getElementById(
+    "hasilJenis"
+  ).textContent =
+    "Absensi: " +
+    namaJenis(
+      jenisAbsensi
+    );
+
+
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Data sedang dikirim...";
+
+
+  sedangProses =
+    true;
+
+
+  tampilStatus(
+    "⏳ Scanner USB membaca NIS " +
+    nis +
+    " dan mengirim ke Google Sheets...",
+    "warning"
+  );
+
+
+  kirimKeAppsScript(
+    nis,
+    jenisAbsensi,
+    "",
+    ""
+  );
 
 }
 
