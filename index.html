@@ -1,42 +1,1054 @@
-from pathlib import Path
+<!DOCTYPE html>
+<html lang="id">
+<head>
 
-src = Path("/mnt/data/Teks yang ditempel (1)(20261005-030858).txt")
-html = src.read_text(encoding="utf-8")
+<meta charset="UTF-8">
 
-old_qr = '''  const nama =
-    dataQR.nama;
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Scanner QR Absensi MTs PSM</title>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f0fdf4;
+  color:#172016;
+}
+
+.header{
+  background:linear-gradient(135deg,#166534,#16a34a);
+  color:white;
+  text-align:center;
+  padding:24px 15px;
+}
+
+.header h1{
+  margin:0;
+  font-size:25px;
+}
+
+.header p{
+  margin:7px 0 0;
+  font-size:16px;
+}
+
+.container{
+  width:94%;
+  max-width:650px;
+  margin:20px auto;
+}
+
+.card{
+  background:white;
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:18px;
+  box-shadow:0 5px 20px rgba(0,0,0,.08);
+}
+
+.card h2{
+  margin:0 0 15px;
+  font-size:20px;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  font-size:15px;
+  outline:none;
+}
+
+input:focus{
+  border-color:#16a34a;
+}
+
+.jenis{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.jenis button{
+  border:0;
+  border-radius:12px;
+  padding:15px 8px;
+  background:#dcfce7;
+  color:#166534;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.jenis button.active{
+  background:#166534;
+  color:white;
+}
+
+.btn{
+  width:100%;
+  border:0;
+  border-radius:12px;
+  padding:14px;
+  margin-top:10px;
+  background:#166534;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn:hover{
+  opacity:.92;
+}
+
+.btn.red{
+  background:#b91c1c;
+}
+
+.btn.gray{
+  background:#475569;
+}
+
+#reader{
+  width:100%;
+  max-width:500px;
+  margin:15px auto;
+  overflow:hidden;
+  border-radius:15px;
+}
+
+.status{
+  margin-top:15px;
+  padding:15px;
+  border-radius:12px;
+  background:#f1f5f9;
+  text-align:center;
+  font-weight:bold;
+  line-height:1.5;
+}
+
+.status.success{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.status.error{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.status.warning{
+  background:#fef3c7;
+  color:#92400e;
+}
 
 
-  const kelas =
-    dataQR.kelas;
+/* =====================================================
+   HASIL SCAN
+===================================================== */
+
+.hasil{
+  display:none;
+  background:#ecfdf5;
+  border:2px solid #22c55e;
+  border-radius:15px;
+  padding:20px;
+  margin-top:15px;
+  text-align:center;
+}
+
+.hasil .judulHasil{
+  font-size:15px;
+  color:#166534;
+  font-weight:bold;
+}
+
+.hasil .namaSiswa{
+  font-size:28px;
+  font-weight:bold;
+  color:#166534;
+  margin-top:8px;
+}
+
+.hasil .kelasSiswa{
+  font-size:18px;
+  font-weight:bold;
+  color:#334155;
+  margin-top:5px;
+}
+
+.hasil .nisSiswa{
+  font-size:14px;
+  color:#64748b;
+  margin-top:8px;
+}
+
+.hasil .jenisNama{
+  margin-top:8px;
+  font-weight:bold;
+  color:#166534;
+}
+
+.hasil .statusKirim{
+  margin-top:10px;
+  font-size:14px;
+  color:#475569;
+}
+
+.info{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.5;
+}
+
+.footer{
+  text-align:center;
+  color:#64748b;
+  font-size:12px;
+  padding:20px;
+}
+
+@media(max-width:500px){
+
+  .header h1{
+    font-size:22px;
+  }
+
+  .card{
+    padding:16px;
+  }
+
+  .jenis{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .hasil .namaSiswa{
+    font-size:24px;
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
 
 
-  if(!nis){
+<!-- =====================================================
+     HEADER
+===================================================== -->
 
-    tampilStatus(
-      "❌ QR terbaca tetapi NIS tidak ditemukan.",
-      "error"
+<div class="header">
+
+  <h1>📷 SCANNER QR ABSENSI</h1>
+
+  <p>MTs PSM Sugihwaras Loceret</p>
+
+</div>
+
+
+
+<div class="container">
+
+
+<!-- =====================================================
+     KONEKSI APPS SCRIPT
+===================================================== -->
+
+<div class="card">
+
+  <h2>🔗 Koneksi Sistem</h2>
+
+  <input
+    id="scriptUrl"
+    type="text"
+    placeholder="Tempel URL Web App Apps Script">
+
+  <button
+    class="btn"
+    onclick="simpanURL()">
+
+    💾 SIMPAN URL
+
+  </button>
+
+  <p class="info">
+
+    Masukkan URL Web App Apps Script yang berakhiran
+    <b>/exec</b>.
+
+  </p>
+
+</div>
+
+
+
+<!-- =====================================================
+     JENIS ABSENSI
+===================================================== -->
+
+<div class="card">
+
+  <h2>1️⃣ Pilih Jenis Absensi</h2>
+
+  <div class="jenis">
+
+    <button
+      id="btnKEHADIRAN"
+      class="active"
+      onclick="pilihJenis('KEHADIRAN',this)">
+
+      🟢 Kehadiran
+
+    </button>
+
+
+    <button
+      id="btnDHUHA"
+      onclick="pilihJenis('DHUHA',this)">
+
+      🌅 Dhuha
+
+    </button>
+
+
+    <button
+      id="btnDHUHUR"
+      onclick="pilihJenis('DHUHUR',this)">
+
+      🕌 Dhuhur
+
+    </button>
+
+
+    <button
+      id="btnMADIN"
+      onclick="pilihJenis('MADIN',this)">
+
+      📚 Madin
+
+    </button>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     SCANNER
+===================================================== -->
+
+<div class="card">
+
+  <h2>2️⃣ Scanner Kamera</h2>
+
+  <div id="reader"></div>
+
+
+  <button
+    class="btn"
+    onclick="mulaiKamera()">
+
+    📷 MULAI SCANNER
+
+  </button>
+
+
+  <button
+    class="btn red"
+    onclick="hentikanKamera()">
+
+    ⛔ HENTIKAN SCANNER
+
+  </button>
+
+
+  <div
+    id="status"
+    class="status">
+
+    Scanner belum dimulai.
+
+  </div>
+
+
+  <!-- ===================================================
+       HASIL QR
+  =================================================== -->
+
+  <div
+    id="hasil"
+    class="hasil">
+
+    <div class="judulHasil">
+
+      ✅ QR BERHASIL DIBACA
+
+    </div>
+
+
+    <!-- NAMA SISWA -->
+
+    <div
+      id="hasilNama"
+      class="namaSiswa">
+
+    </div>
+
+
+    <!-- KELAS -->
+
+    <div
+      id="hasilKelas"
+      class="kelasSiswa">
+
+    </div>
+
+
+    <!-- NIS -->
+
+    <div
+      id="hasilNis"
+      class="nisSiswa">
+
+    </div>
+
+
+    <!-- JENIS ABSENSI -->
+
+    <div
+      id="hasilJenis"
+      class="jenisNama">
+
+    </div>
+
+
+    <div
+      id="hasilKirim"
+      class="statusKirim">
+
+      Data sedang dikirim ke sistem...
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TES MANUAL
+===================================================== -->
+
+<div class="card">
+
+  <h2>3️⃣ Tes Manual</h2>
+
+  <p class="info">
+
+    Masukkan NIS siswa untuk mencoba pengiriman absensi.
+
+  </p>
+
+
+  <input
+    id="nisManual"
+    type="text"
+    placeholder="Masukkan NIS">
+
+
+  <button
+    class="btn"
+    onclick="kirimManual()">
+
+    ✅ KIRIM NIS
+
+  </button>
+
+</div>
+
+
+</div>
+
+
+
+<!-- =====================================================
+     FOOTER
+===================================================== -->
+
+<div class="footer">
+
+  Sistem Absensi Digital<br>
+  MTs PSM Sugihwaras Loceret
+
+</div>
+
+
+
+<script>
+
+
+/* =====================================================
+   VARIABEL UTAMA
+===================================================== */
+
+let jenisAbsensi = "KEHADIRAN";
+
+let scanner = null;
+
+let kameraAktif = false;
+
+let sedangProses = false;
+
+let qrTerakhir = "";
+
+let waktuQRTerakhir = 0;
+
+
+/* =====================================================
+   SAAT HALAMAN DIBUKA
+===================================================== */
+
+window.addEventListener(
+  "load",
+  function(){
+
+    const url =
+      localStorage.getItem(
+        "scriptUrl"
+      );
+
+
+    if(url){
+
+      document.getElementById(
+        "scriptUrl"
+      ).value = url;
+
+    }
+
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+
+    const jenisURL =
+      String(
+        params.get("jenis") || ""
+      ).toUpperCase();
+
+
+    if(
+      jenisURL === "KEHADIRAN" ||
+      jenisURL === "DHUHA" ||
+      jenisURL === "DHUHUR" ||
+      jenisURL === "MADIN"
+    ){
+
+      const tombol =
+        document.getElementById(
+          "btn" + jenisURL
+        );
+
+
+      if(tombol){
+
+        pilihJenis(
+          jenisURL,
+          tombol
+        );
+
+      }
+
+    }
+
+
+    if(url){
+
+      setTimeout(
+        function(){
+
+          mulaiKamera();
+
+        },
+        700
+      );
+
+    }
+
+  }
+);
+
+
+/* =====================================================
+   SIMPAN URL APPS SCRIPT
+===================================================== */
+
+function simpanURL(){
+
+  const input =
+    document.getElementById(
+      "scriptUrl"
     );
 
 
-    sedangProses =
-      false;
+  const url =
+    input.value.trim();
+
+
+  if(!url){
+
+    tampilStatus(
+      "❌ URL Apps Script belum diisi.",
+      "error"
+    );
 
     return;
 
   }
 
 
-  /*
-   * Tampilkan hasil
-   */
+  if(
+    !url.startsWith(
+      "https://script.google.com/"
+    )
+  ){
 
-  document.getElementById(
-    "hasil"
-  ).style.display =
-    "block";
-'''
-new_qr = '''  let nama =
+    tampilStatus(
+      "❌ URL Apps Script tidak valid.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  if(
+    !url.includes(
+      "/exec"
+    )
+  ){
+
+    tampilStatus(
+      "❌ URL harus menggunakan alamat /exec.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  localStorage.setItem(
+    "scriptUrl",
+    url
+  );
+
+
+  tampilStatus(
+    "✅ URL Apps Script berhasil disimpan.",
+    "success"
+  );
+
+
+  setTimeout(
+    function(){
+
+      mulaiKamera();
+
+    },
+    500
+  );
+
+}
+
+
+/* =====================================================
+   PILIH JENIS ABSENSI
+===================================================== */
+
+function pilihJenis(
+  jenis,
+  tombol
+){
+
+  jenisAbsensi =
+    String(
+      jenis
+    ).toUpperCase();
+
+
+  document
+    .querySelectorAll(
+      ".jenis button"
+    )
+    .forEach(
+      function(btn){
+
+        btn.classList.remove(
+          "active"
+        );
+
+      }
+    );
+
+
+  tombol.classList.add(
+    "active"
+  );
+
+
+  tampilStatus(
+    "Jenis absensi: " +
+    namaJenis(
+      jenisAbsensi
+    ),
+    "warning"
+  );
+
+}
+
+
+/* =====================================================
+   NAMA JENIS ABSENSI
+===================================================== */
+
+function namaJenis(
+  jenis
+){
+
+  if(
+    jenis === "KEHADIRAN"
+  ){
+
+    return "Kehadiran";
+
+  }
+
+
+  if(
+    jenis === "DHUHA"
+  ){
+
+    return "Dhuha";
+
+  }
+
+
+  if(
+    jenis === "DHUHUR"
+  ){
+
+    return "Dhuhur";
+
+  }
+
+
+  if(
+    jenis === "MADIN"
+  ){
+
+    return "Madin";
+
+  }
+
+
+  return jenis;
+
+}
+
+
+/* =====================================================
+   MULAI KAMERA
+===================================================== */
+
+async function mulaiKamera(){
+
+  if(kameraAktif){
+
+    tampilStatus(
+      "⚠️ Kamera sudah aktif.",
+      "warning"
+    );
+
+    return;
+
+  }
+
+
+  const url =
+    localStorage.getItem(
+      "scriptUrl"
+    );
+
+
+  if(!url){
+
+    tampilStatus(
+      "❌ Simpan URL Apps Script terlebih dahulu.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    tampilStatus(
+      "⏳ Membuka kamera...",
+      "warning"
+    );
+
+
+    const cameras =
+      await Html5Qrcode.getCameras();
+
+
+    if(
+      !cameras ||
+      cameras.length === 0
+    ){
+
+      throw new Error(
+        "Kamera tidak ditemukan."
+      );
+
+    }
+
+
+    let kamera =
+      cameras.find(
+        function(c){
+
+          return /back|rear|environment|belakang/i
+            .test(
+              c.label || ""
+            );
+
+        }
+      );
+
+
+    if(!kamera){
+
+      kamera =
+        cameras[
+          cameras.length - 1
+        ];
+
+    }
+
+
+    scanner =
+      new Html5Qrcode(
+        "reader"
+      );
+
+
+    await scanner.start(
+
+      kamera.id,
+
+      {
+
+        fps:15,
+
+        qrbox:function(
+          viewfinderWidth,
+          viewfinderHeight
+        ){
+
+          const ukuran =
+            Math.floor(
+              Math.min(
+                viewfinderWidth,
+                viewfinderHeight
+              ) * 0.70
+            );
+
+
+          return {
+
+            width:Math.max(
+              220,
+              Math.min(
+                ukuran,
+                380
+              )
+            ),
+
+            height:Math.max(
+              220,
+              Math.min(
+                ukuran,
+                380
+              )
+            )
+
+          };
+
+        },
+
+        aspectRatio:1.0,
+
+        disableFlip:false
+
+      },
+
+
+      function(decodedText){
+
+        qrBerhasil(
+          decodedText
+        );
+
+      },
+
+
+      function(errorMessage){
+
+      }
+
+    );
+
+
+    kameraAktif =
+      true;
+
+
+    tampilStatus(
+      "📷 Kamera aktif. Arahkan QR siswa ke kotak.",
+      "success"
+    );
+
+  }
+
+  catch(error){
+
+    console.error(
+      "KAMERA ERROR:",
+      error
+    );
+
+
+    scanner =
+      null;
+
+
+    kameraAktif =
+      false;
+
+
+    tampilStatus(
+      "❌ Kamera gagal dibuka: " +
+      (
+        error.message ||
+        error
+      ),
+      "error"
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   QR BERHASIL DIBACA
+===================================================== */
+
+async function qrBerhasil(
+  isiQR
+){
+
+  if(sedangProses){
+
+    return;
+
+  }
+
+
+  isiQR =
+    String(
+      isiQR || ""
+    ).trim();
+
+
+  if(!isiQR){
+
+    return;
+
+  }
+
+
+  const sekarang =
+    Date.now();
+
+
+  if(
+    isiQR === qrTerakhir &&
+    (
+      sekarang -
+      waktuQRTerakhir
+    ) < 4000
+  ){
+
+    return;
+
+  }
+
+
+  qrTerakhir =
+    isiQR;
+
+
+  waktuQRTerakhir =
+    sekarang;
+
+
+  sedangProses =
+    true;
+
+
+  console.log(
+    "QR TERBACA:",
+    isiQR
+  );
+
+
+  /*
+   * Ambil seluruh data dari QR
+   */
+  const dataQR =
+    ambilDataQR(
+      isiQR
+    );
+
+
+  const nis =
+    dataQR.nis;
+
+
+  let nama =
     dataQR.nama;
 
 
@@ -91,18 +1103,105 @@ new_qr = '''  let nama =
     "hasil"
   ).style.display =
     "block";
-'''
 
-if old_qr not in html:
-    raise RuntimeError("Bagian qrBerhasil tidak ditemukan")
 
-html = html.replace(old_qr, new_qr, 1)
+  document.getElementById(
+    "hasilNama"
+  ).textContent =
+    nama || "Nama belum tersedia";
 
-marker = '''/* =====================================================
-   AMBIL DATA QR
-   ===================================================== */
-'''
-helper = '''/* =====================================================
+
+  document.getElementById(
+    "hasilKelas"
+  ).textContent =
+    kelas
+      ? "Kelas " + kelas
+      : "";
+
+
+  document.getElementById(
+    "hasilNis"
+  ).textContent =
+    "NIS: " + nis;
+
+
+  document.getElementById(
+    "hasilJenis"
+  ).textContent =
+    "Absensi: " +
+    namaJenis(
+      jenisAbsensi
+    );
+
+
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Data " +
+    (
+      nama || ("NIS " + nis)
+    ) +
+    " sedang dikirim ke Google Sheets...";
+
+
+  tampilStatus(
+    "⏳ QR terbaca: " +
+    (
+      nama || ("NIS " + nis)
+    ) +
+    " sedang dikirim ke Google Sheets...",
+    "warning"
+  );
+
+
+  /*
+   * Pause scanner sementara
+   */
+
+  try{
+
+    if(
+      scanner &&
+      kameraAktif
+    ){
+
+      scanner.pause(
+        true
+      );
+
+    }
+
+  }
+
+  catch(error){
+
+    console.log(
+      "Pause scanner:",
+      error
+    );
+
+  }
+
+
+  /*
+   * Kirim ke Apps Script
+   *
+   * Nama dan kelas ikut dikirim.
+   * Apps Script lama tetap kompatibel
+   * karena parameter tambahan boleh diabaikan.
+   */
+
+  kirimKeAppsScript(
+    nis,
+    jenisAbsensi,
+    nama,
+    kelas
+  );
+
+}
+
+
+/* =====================================================
    CARI DATA SISWA DARI APPS SCRIPT
    ===================================================== */
 
@@ -203,22 +1302,641 @@ async function cariSiswaDariAppsScript(
 /* =====================================================
    AMBIL DATA QR
    ===================================================== */
-'''
-if marker not in html:
-    raise RuntimeError("Marker AMBIL DATA QR tidak ditemukan")
-html = html.replace(marker, helper, 1)
 
-old_usb = '''  /*
-   * Scanner USB hanya mengirim NIS.
+function ambilDataQR(
+  isi
+){
+
+  isi =
+    String(
+      isi || ""
+    ).trim();
+
+
+  /*
+   * QR JSON
    *
-   * Nama akan ditampilkan jika QR kamera
-   * membawa data nama.
+   * Contoh:
    *
-   * Untuk scanner USB, backend tetap menerima
-   * NIS seperti sistem lama.
+   * {
+   *   "nis":"121235180009250018",
+   *   "nama":"AHMAD FULAN",
+   *   "kelas":"VII A"
+   * }
    */
 
+  try{
+
+    const data =
+      JSON.parse(
+        isi
+      );
+
+
+    if(data){
+
+      const nis =
+        data.nis ||
+        data.NIS ||
+        "";
+
+
+      const nama =
+        data.nama ||
+        data.NAMA ||
+        data.name ||
+        data.namaSiswa ||
+        "";
+
+
+      const kelas =
+        data.kelas ||
+        data.KELAS ||
+        data.class ||
+        "";
+
+
+      if(nis){
+
+        return {
+
+          nis:String(
+            nis
+          ).trim(),
+
+          nama:String(
+            nama
+          ).trim(),
+
+          kelas:String(
+            kelas
+          ).trim()
+
+        };
+
+      }
+
+    }
+
+  }
+
+  catch(e){
+
+    /*
+     * Bukan JSON.
+     * Lanjutkan ke format berikutnya.
+     */
+
+  }
+
+
+  /*
+   * QR hanya angka
+   */
+
+  if(
+    /^\d+$/.test(
+      isi
+    )
+  ){
+
+    return {
+
+      nis:isi,
+
+      nama:"",
+
+      kelas:""
+
+    };
+
+  }
+
+
+  /*
+   * Format:
+   *
+   * NIS:1001
+   */
+
+  const pola =
+    isi.match(
+      /NIS\s*[:=]?\s*(\d{3,30})/i
+    );
+
+
+  if(pola){
+
+    return {
+
+      nis:pola[1],
+
+      nama:"",
+
+      kelas:""
+
+    };
+
+  }
+
+
+  /*
+   * Cari angka
+   */
+
+  const angka =
+    isi.match(
+      /\d{3,30}/
+    );
+
+
+  if(angka){
+
+    return {
+
+      nis:angka[0],
+
+      nama:"",
+
+      kelas:""
+
+    };
+
+  }
+
+
+  return {
+
+    nis:"",
+
+    nama:"",
+
+    kelas:""
+
+  };
+
+}
+
+
+/* =====================================================
+   FUNGSI LAMA — AMBIL NIS
+   Tetap dipertahankan untuk kompatibilitas.
+===================================================== */
+
+function ambilNIS(
+  isi
+){
+
+  const data =
+    ambilDataQR(
+      isi
+    );
+
+
+  return data.nis || "";
+
+}
+
+
+/* =====================================================
+   KIRIM KE APPS SCRIPT
+===================================================== */
+
+function kirimKeAppsScript(
+  nis,
+  jenis,
+  nama,
+  kelas
+){
+
+  const url =
+    localStorage.getItem(
+      "scriptUrl"
+    );
+
+
+  if(!url){
+
+    tampilStatus(
+      "❌ URL Apps Script belum disimpan.",
+      "error"
+    );
+
+
+    prosesSelesai();
+
+    return;
+
+  }
+
+
+  let frame =
+    document.getElementById(
+      "hasilAbsensiFrame"
+    );
+
+
+  if(!frame){
+
+    frame =
+      document.createElement(
+        "iframe"
+      );
+
+
+    frame.id =
+      "hasilAbsensiFrame";
+
+
+    frame.name =
+      "hasilAbsensiFrame";
+
+
+    frame.style.display =
+      "none";
+
+
+    document.body.appendChild(
+      frame
+    );
+
+  }
+
+
+  const form =
+    document.createElement(
+      "form"
+    );
+
+
+  form.method =
+    "POST";
+
+
+  form.action =
+    url;
+
+
+  form.target =
+    "hasilAbsensiFrame";
+
+
+  form.style.display =
+    "none";
+
+
+  /*
+   * NIS
+   */
+
+  const inputNis =
+    document.createElement(
+      "input"
+    );
+
+
+  inputNis.type =
+    "hidden";
+
+
+  inputNis.name =
+    "nis";
+
+
+  inputNis.value =
+    String(
+      nis
+    );
+
+
+  /*
+   * JENIS
+   */
+
+  const inputJenis =
+    document.createElement(
+      "input"
+    );
+
+
+  inputJenis.type =
+    "hidden";
+
+
+  inputJenis.name =
+    "jenis";
+
+
+  inputJenis.value =
+    String(
+      jenis
+    );
+
+
+  /*
+   * NAMA
+   */
+
+  const inputNama =
+    document.createElement(
+      "input"
+    );
+
+
+  inputNama.type =
+    "hidden";
+
+
+  inputNama.name =
+    "nama";
+
+
+  inputNama.value =
+    String(
+      nama || ""
+    );
+
+
+  /*
+   * KELAS
+   */
+
+  const inputKelas =
+    document.createElement(
+      "input"
+    );
+
+
+  inputKelas.type =
+    "hidden";
+
+
+  inputKelas.name =
+    "kelas";
+
+
+  inputKelas.value =
+    String(
+      kelas || ""
+    );
+
+
+  form.appendChild(
+    inputNis
+  );
+
+
+  form.appendChild(
+    inputJenis
+  );
+
+
+  form.appendChild(
+    inputNama
+  );
+
+
+  form.appendChild(
+    inputKelas
+  );
+
+
+  document.body.appendChild(
+    form
+  );
+
+
+  console.log(
+    "MENGIRIM DATA:",
+    {
+      nis:nis,
+      nama:nama,
+      kelas:kelas,
+      jenis:jenis,
+      url:url
+    }
+  );
+
+
+  try{
+
+    form.submit();
+
+  }
+
+  catch(error){
+
+    console.error(
+      "FORM SUBMIT ERROR:",
+      error
+    );
+
+
+    tampilStatus(
+      "❌ Gagal mengirim data.",
+      "error"
+    );
+
+
+    try{
+
+      form.remove();
+
+    }
+
+    catch(e){}
+
+
+    prosesSelesai();
+
+    return;
+
+  }
+
+
+  /*
+   * Tunggu Apps Script
+   */
+
+  setTimeout(
+    function(){
+
+      try{
+
+        form.remove();
+
+      }
+
+      catch(e){}
+
+
+      const namaTampil =
+        nama ||
+        ("NIS " + nis);
+
+
+      tampilStatus(
+        "✅ " +
+        namaTampil +
+        " berhasil dikirim. Scanner siap untuk QR berikutnya.",
+        "success"
+      );
+
+
+      const hasilKirim =
+        document.getElementById(
+          "hasilKirim"
+        );
+
+
+      if(hasilKirim){
+
+        hasilKirim.textContent =
+          "✅ " +
+          namaTampil +
+          " berhasil dicatat.";
+
+      }
+
+
+      /*
+       * Sembunyikan hasil
+       */
+
+      setTimeout(
+        function(){
+
+          const hasil =
+            document.getElementById(
+              "hasil"
+            );
+
+
+          if(hasil){
+
+            hasil.style.display =
+              "none";
+
+          }
+
+        },
+        2500
+      );
+
+
+      sedangProses =
+        false;
+
+
+      lanjutScanner();
+
+    },
+    1500
+  );
+
+}
+
+
+/* =====================================================
+   LANJUTKAN SCANNER
+===================================================== */
+
+function lanjutScanner(){
+
+  if(
+    !scanner ||
+    !kameraAktif
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    scanner.resume();
+
+
+    tampilStatus(
+      "📷 Scanner aktif kembali. Silakan scan QR berikutnya.",
+      "success"
+    );
+
+  }
+
+  catch(error){
+
+    console.error(
+      "RESUME ERROR:",
+      error
+    );
+
+
+    setTimeout(
+      function(){
+
+        try{
+
+          if(
+            scanner &&
+            kameraAktif
+          ){
+
+            scanner.resume();
+
+          }
+
+        }
+
+        catch(e){
+
+          console.error(
+            "RESUME ULANG ERROR:",
+            e
+          );
+
+        }
+
+      },
+      500
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   TES MANUAL
+===================================================== */
+
+function kirimManual(){
+
+  const nis =
+    document.getElementById(
+      "nisManual"
+    ).value.trim();
+
+
+  if(!nis){
+
+    tampilStatus(
+      "❌ Masukkan NIS terlebih dahulu.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
   if(sedangProses){
+
+    tampilStatus(
+      "⏳ Masih ada data yang sedang dikirim.",
+      "warning"
+    );
 
     return;
 
@@ -226,8 +1944,372 @@ old_usb = '''  /*
 
 
   document.getElementById(
-'''
-new_usb = '''  /*
+    "hasil"
+  ).style.display =
+    "block";
+
+
+  document.getElementById(
+    "hasilNama"
+  ).textContent =
+    "Tes Manual";
+
+
+  document.getElementById(
+    "hasilKelas"
+  ).textContent =
+    "";
+
+
+  document.getElementById(
+    "hasilNis"
+  ).textContent =
+    "NIS: " + nis;
+
+
+  document.getElementById(
+    "hasilJenis"
+  ).textContent =
+    "Absensi: " +
+    namaJenis(
+      jenisAbsensi
+    );
+
+
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Mengirim data...";
+
+
+  sedangProses =
+    true;
+
+
+  tampilStatus(
+    "⏳ Mengirim NIS " +
+    nis +
+    "...",
+    "warning"
+  );
+
+
+  kirimKeAppsScript(
+    nis,
+    jenisAbsensi,
+    "",
+    ""
+  );
+
+}
+
+
+/* =====================================================
+   HENTIKAN KAMERA
+===================================================== */
+
+async function hentikanKamera(){
+
+  if(!scanner){
+
+    tampilStatus(
+      "Scanner belum berjalan.",
+      "warning"
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    await scanner.stop();
+
+  }
+
+  catch(error){
+
+    console.log(
+      "STOP ERROR:",
+      error
+    );
+
+  }
+
+
+  try{
+
+    scanner.clear();
+
+  }
+
+  catch(error){
+
+    console.log(
+      "CLEAR ERROR:",
+      error
+    );
+
+  }
+
+
+  scanner =
+    null;
+
+
+  kameraAktif =
+    false;
+
+
+  sedangProses =
+    false;
+
+
+  qrTerakhir =
+    "";
+
+
+  waktuQRTerakhir =
+    0;
+
+
+  tampilStatus(
+    "⛔ Scanner dihentikan.",
+    "warning"
+  );
+
+}
+
+
+/* =====================================================
+   PROSES SELESAI
+===================================================== */
+
+function prosesSelesai(){
+
+  sedangProses =
+    false;
+
+
+  setTimeout(
+    function(){
+
+      lanjutScanner();
+
+    },
+    500
+  );
+
+}
+
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+function tampilStatus(
+  pesan,
+  tipe
+){
+
+  const el =
+    document.getElementById(
+      "status"
+    );
+
+
+  if(!el){
+
+    return;
+
+  }
+
+
+  el.textContent =
+    pesan;
+
+
+  el.className =
+    "status " +
+    (
+      tipe ||
+      ""
+    );
+
+}
+
+
+/* =====================================================
+   SCANNER USB VSC PB-333U
+   Tetap mendukung scanner USB keyboard.
+===================================================== */
+
+let bufferScannerUSB = "";
+
+let timerScannerUSB = null;
+
+let waktuKeyUSB = 0;
+
+
+window.addEventListener(
+  "keydown",
+  function(event){
+
+    const key =
+      event.key;
+
+
+    const sekarang =
+      Date.now();
+
+
+    /*
+     * Scanner USB biasanya mengirim
+     * Enter setelah NIS.
+     */
+
+    if(
+      key === "Enter" ||
+      key === "Tab"
+    ){
+
+      if(
+        bufferScannerUSB.length >= 3
+      ){
+
+        event.preventDefault();
+
+
+        prosesScanUSB(
+          bufferScannerUSB
+        );
+
+
+        bufferScannerUSB =
+          "";
+
+
+        waktuKeyUSB =
+          0;
+
+      }
+
+      return;
+
+    }
+
+
+    /*
+     * Hanya menerima angka.
+     */
+
+    if(
+      !/^[0-9]$/.test(
+        key
+      )
+    ){
+
+      return;
+
+    }
+
+
+    /*
+     * Jika jeda antar karakter
+     * terlalu lama, anggap scan baru.
+     */
+
+    if(
+      waktuKeyUSB &&
+      (
+        sekarang -
+        waktuKeyUSB
+      ) > 350
+    ){
+
+      bufferScannerUSB =
+        "";
+
+    }
+
+
+    waktuKeyUSB =
+      sekarang;
+
+
+    bufferScannerUSB +=
+      key;
+
+
+    clearTimeout(
+      timerScannerUSB
+    );
+
+
+    timerScannerUSB =
+      setTimeout(
+        function(){
+
+          if(
+            bufferScannerUSB.length >= 3
+          ){
+
+            const hasil =
+              bufferScannerUSB;
+
+
+            bufferScannerUSB =
+              "";
+
+
+            waktuKeyUSB =
+              0;
+
+
+            prosesScanUSB(
+              hasil
+            );
+
+          }
+
+        },
+        140
+      );
+
+  },
+  true
+);
+
+
+/* =====================================================
+   PROSES SCAN USB
+===================================================== */
+
+function prosesScanUSB(
+  nis
+){
+
+  nis =
+    String(
+      nis || ""
+    ).trim();
+
+
+  if(!nis){
+
+    return;
+
+  }
+
+
+  console.log(
+    "SCAN USB VSC PB-333U:",
+    nis
+  );
+
+
+  /*
    * Scanner USB hanya mengirim NIS.
    * Cari nama dan kelas dari database Apps Script.
    */
@@ -260,23 +2342,12 @@ new_usb = '''  /*
 
 
   document.getElementById(
-'''
-if old_usb not in html:
-    raise RuntimeError("Bagian USB tidak ditemukan")
-html = html.replace(old_usb, new_usb, 1)
-
-old_usb_name = '''  document.getElementById(
-    "hasilNama"
-  ).textContent =
-    "NIS " + nis;
+    "hasil"
+  ).style.display =
+    "block";
 
 
   document.getElementById(
-    "hasilKelas"
-  ).textContent =
-    "";
-'''
-new_usb_name = '''  document.getElementById(
     "hasilNama"
   ).textContent =
     nama || ("NIS " + nis);
@@ -288,27 +2359,34 @@ new_usb_name = '''  document.getElementById(
     kelas
       ? "Kelas " + kelas
       : "";
-'''
-if old_usb_name not in html:
-    raise RuntimeError("Tampilan USB tidak ditemukan")
-html = html.replace(old_usb_name, new_usb_name, 1)
-
-old_usb_status = '''  tampilStatus(
-    "⏳ Scanner USB membaca NIS " +
-    nis +
-    " dan mengirim ke Google Sheets...",
-    "warning"
-  );
 
 
-  kirimKeAppsScript(
-    nis,
-    jenisAbsensi,
-    "",
-    ""
-  );
-'''
-new_usb_status = '''  tampilStatus(
+  document.getElementById(
+    "hasilNis"
+  ).textContent =
+    "NIS: " + nis;
+
+
+  document.getElementById(
+    "hasilJenis"
+  ).textContent =
+    "Absensi: " +
+    namaJenis(
+      jenisAbsensi
+    );
+
+
+  document.getElementById(
+    "hasilKirim"
+  ).textContent =
+    "⏳ Data sedang dikirim...";
+
+
+  sedangProses =
+    true;
+
+
+  tampilStatus(
     "⏳ Scanner USB membaca " +
     (nama || ("NIS " + nis)) +
     " dan mengirim ke Google Sheets...",
@@ -322,15 +2400,10 @@ new_usb_status = '''  tampilStatus(
     nama,
     kelas
   );
-'''
-if old_usb_status not in html:
-    raise RuntimeError("Status USB tidak ditemukan")
-html = html.replace(old_usb_status, new_usb_status, 1)
 
-out = Path("/mnt/data/index_github_perbaikan.html")
-out.write_text(html, encoding="utf-8")
+}
 
-print(f"Berhasil membuat file: {out}")
-print(f"Ukuran: {out.stat().st_size:,} byte")
-print(f"Baris: {len(html.splitlines())}")
-print("Perubahan: QR angka lookup nama/kelas + USB scanner lookup nama/kelas.")
+</script>
+
+</body>
+</html>
