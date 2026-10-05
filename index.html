@@ -1205,99 +1205,95 @@ async function qrBerhasil(
    CARI DATA SISWA DARI APPS SCRIPT
    ===================================================== */
 
-async function cariSiswaDariAppsScript(
-  nis
-){
+function cariSiswaDariAppsScript(nis){
 
-  nis =
-    String(
-      nis || ""
-    ).trim();
+  return new Promise(function(resolve){
 
+    nis = String(nis || "").trim();
 
-  if(!nis){
+    if(!nis){
+      resolve(null);
+      return;
+    }
 
-    return null;
+    const url = localStorage.getItem("scriptUrl");
 
-  }
+    if(!url){
+      console.warn("URL Apps Script belum disimpan.");
+      resolve(null);
+      return;
+    }
 
+    const namaCallback =
+      "callbackSiswa_" + Date.now();
 
-  const url =
-    localStorage.getItem(
-      "scriptUrl"
-    );
+    let script = null;
 
+    window[namaCallback] = function(data){
 
-  if(!url){
+      console.log(
+        "HASIL CARI SISWA:",
+        data
+      );
 
-    console.warn(
-      "URL Apps Script belum disimpan."
-    );
+      resolve(data);
 
-    return null;
+      try{
+        delete window[namaCallback];
+      }
+      catch(error){
+        window[namaCallback] = undefined;
+      }
 
-  }
+      if(script){
+        script.remove();
+      }
 
-
-  try{
+    };
 
     const pemisah =
       url.includes("?")
         ? "&"
         : "?";
 
+    script =
+      document.createElement("script");
 
-    const response =
-      await fetch(
-        url +
-        pemisah +
-        "api=siswa&nis=" +
-        encodeURIComponent(nis),
-        {
-          method:"GET",
-          cache:"no-store"
-        }
+    script.src =
+      url +
+      pemisah +
+      "api=siswa" +
+      "&nis=" +
+      encodeURIComponent(nis) +
+      "&callback=" +
+      encodeURIComponent(namaCallback);
+
+    script.onerror = function(){
+
+      console.error(
+        "GAGAL MENGAMBIL DATA SISWA"
       );
 
+      resolve(null);
 
-    if(!response.ok){
+      try{
+        delete window[namaCallback];
+      }
+      catch(error){
+        window[namaCallback] = undefined;
+      }
 
-      throw new Error(
-        "HTTP " +
-        response.status
-      );
+      if(script){
+        script.remove();
+      }
 
-    }
+    };
 
+    document.body.appendChild(script);
 
-    const data =
-      await response.json();
-
-
-    console.log(
-      "HASIL CARI SISWA:",
-      data
-    );
-
-
-    return data;
-
-  }
-
-  catch(error){
-
-    console.error(
-      "GAGAL CARI DATA SISWA:",
-      error
-    );
-
-
-    return null;
-
-  }
+  });
 
 }
-
 
 /* =====================================================
    AMBIL DATA QR
